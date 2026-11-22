@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val aksharTypeface by lazy {
-        resources.getFont(R.font.akshar_semibold)
+        resources.getFont(R.font.akshar_bold)
     }
 
     private val webViewAssetLoader by lazy {
@@ -136,9 +136,9 @@ class MainActivity : AppCompatActivity() {
         val css = """
             @font-face {
                 font-family: 'ShindoAkshar';
-                src: url('https://appassets.androidplatform.net/res/font/akshar_semibold.ttf') format('truetype');
+                src: url('https://appassets.androidplatform.net/res/font/akshar_bold.ttf') format('truetype');
                 font-style: normal;
-                font-weight: 400;
+                font-weight: 700;
             }
             @font-face {
                 font-family: 'ShindoGenZen';
@@ -148,6 +148,7 @@ class MainActivity : AppCompatActivity() {
             }
             html, body, body *:not(svg):not(svg *):not(canvas) {
                 font-family: 'ShindoAkshar', 'ShindoGenZen', sans-serif !important;
+                font-weight: 400 !important;
             }
         """.trimIndent()
         val cssLiteral = org.json.JSONObject.quote(css)
@@ -1259,14 +1260,14 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
 
         intensityText = text("--.-", 22f, true).apply {
             includeFontPadding = false
-            translationY = dp(2).toFloat()
+            translationY = dp(4).toFloat()
         }
         intensityText.gravity = Gravity.END
         intensityColorBar = addValueRow("リアルタイム震度:", intensityText)
 
         pgaText = text("--.- gal", 22f, true).apply {
             includeFontPadding = false
-            translationY = dp(2).toFloat()
+            translationY = dp(4).toFloat()
             setPadding(0, 0, 0, dp(3))
         }
         pgaText.gravity = Gravity.END

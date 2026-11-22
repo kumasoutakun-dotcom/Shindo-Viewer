@@ -109,7 +109,7 @@ APKをインストールする際は、Androidの設定で必要なインスト�
 ## 使用フォント
 
 - 日本語：GenZenGothicKaiC
-- Akshar SemiBoldの字形がある日本語以外の文字：Akshar
+- Akshar Boldの字形がある日本語以外の文字：Akshar
 
 AksharはAkshar Type Project Authorsによるフォントで、SIL Open Font License 1.1の下で配布されています。ライセンス本文はアプリ内の `app/src/main/assets/licenses/AKSHAR-OFL.txt` に同梱しています。
 

@@ -14,8 +14,8 @@ import android.widget.TextView
 import java.util.WeakHashMap
 
 /**
- * 日本語文字はGenZenGothicKaiC、それ以外のうちAksharが字形を持つ文字はAksharで描画する。
- * 元のテキスト、色、サイズ、太字などの設定は変更しない。
+ * 日本語はGenZenGothicKaiCの通常ウェイト、対応する英数字はAkshar Boldで描画する。
+ * TextView側の太字指定で日本語が過度に太くなるのを避ける。
  */
 object BilingualFontStyler {
 
@@ -72,11 +72,13 @@ object BilingualFontStyler {
         }
         if (alreadyInstalled) return
 
-        val style = textView.typeface?.style ?: Typeface.NORMAL
-        textView.typeface = Typeface.create(japaneseTypeface, style)
+        // Japanese glyphs always use the normal face to avoid overly dense strokes.
+        textView.typeface = Typeface.create(japaneseTypeface, Typeface.NORMAL)
 
+        // Akshar Bold is a dedicated static face, so do not synthesize weight from the
+        // original TextView style.
         val aksharPaint = Paint().apply {
-            typeface = Typeface.create(aksharTypeface, style)
+            typeface = aksharTypeface
         }
 
         textView.addTextChangedListener(object : TextWatcher {
