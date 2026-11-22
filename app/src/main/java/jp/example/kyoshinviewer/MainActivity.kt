@@ -1181,7 +1181,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             }
         )
 
-        intensityClassText = text("--", 32f, true).apply {
+        intensityClassText = text("--", 34f, true).apply {
             gravity = Gravity.CENTER
             includeFontPadding = false
             // Shift the number down inside the unchanged badge bounds.
