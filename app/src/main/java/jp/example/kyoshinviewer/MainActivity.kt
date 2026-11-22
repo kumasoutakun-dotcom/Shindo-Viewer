@@ -28,6 +28,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.webkit.WebViewAssetLoader
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -121,6 +122,12 @@ class MainActivity : AppCompatActivity() {
         resources.getFont(R.font.akshar_regular)
     }
 
+    private val webViewAssetLoader by lazy {
+        WebViewAssetLoader.Builder()
+            .addPathHandler("/res/", WebViewAssetLoader.ResourcesPathHandler(this))
+            .build()
+    }
+
     private fun applyBilingualFonts(view: View?) {
         view?.let { BilingualFontStyler.install(it, appTypeface, aksharTypeface) }
     }
@@ -129,13 +136,13 @@ class MainActivity : AppCompatActivity() {
         val css = """
             @font-face {
                 font-family: 'ShindoAkshar';
-                src: url('file:///android_res/font/akshar_regular.ttf') format('truetype');
+                src: url('https://appassets.androidplatform.net/res/font/akshar_regular.ttf') format('truetype');
                 font-style: normal;
                 font-weight: 400;
             }
             @font-face {
                 font-family: 'ShindoGenZen';
-                src: url('file:///android_res/font/gen_zen_gothic_kaic.ttf') format('truetype');
+                src: url('https://appassets.androidplatform.net/res/font/gen_zen_gothic_kaic.ttf') format('truetype');
                 font-style: normal;
                 font-weight: 400;
             }
@@ -902,9 +909,29 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
-            settings.allowFileAccess = true
+            settings.allowFileAccess = false
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val requestUrl = request?.url ?: return super.shouldInterceptRequest(view, request)
+                    val response = webViewAssetLoader.shouldInterceptRequest(requestUrl)
+                        ?: return super.shouldInterceptRequest(view, request)
+
+                    val headers = (response.responseHeaders ?: emptyMap()).toMutableMap()
+                    headers["Access-Control-Allow-Origin"] = "*"
+                    return WebResourceResponse(
+                        response.mimeType,
+                        response.encoding,
+                        response.statusCode,
+                        response.reasonPhrase,
+                        headers,
+                        response.data
+                    )
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     view?.let {
                         injectBilingualWebFonts(it)
