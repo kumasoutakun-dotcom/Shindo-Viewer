@@ -902,6 +902,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
+            settings.allowFileAccess = true
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
@@ -1658,7 +1659,6 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
     private fun text(value: String, size: Float, bold: Boolean = false): TextView =
         TextView(this).apply {
             text = value
-            applyBilingualFonts(this)
             textSize = size
             includeFontPadding = false
             setPadding(0, 0, 0, 0)
@@ -1668,6 +1668,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
                 appTypeface,
                 if (bold) Typeface.BOLD else Typeface.NORMAL
             )
+            applyBilingualFonts(this)
             gravity = Gravity.CENTER_VERTICAL
             maxLines = 1
         }
@@ -2342,6 +2343,7 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
             text = cls?.label ?: "--"
             textSize = 21f
             typeface = Typeface.create(appTypeface, Typeface.BOLD)
+            applyBilingualFonts(this)
             includeFontPadding = false
             gravity = Gravity.CENTER
             setTextColor(badgeColors?.text ?: Color.WHITE)
@@ -2414,6 +2416,7 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
         val playButton = MaterialButton(this).apply {
             text = "再生"
             typeface = appTypeface
+            applyBilingualFonts(this)
             isAllCaps = false
             textSize = 12f
             cornerRadius = dp(9)
@@ -2436,6 +2439,7 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
         val deleteButton = MaterialButton(this).apply {
             text = "削除"
             typeface = appTypeface
+            applyBilingualFonts(this)
             isAllCaps = false
             textSize = 12f
             cornerRadius = dp(9)
