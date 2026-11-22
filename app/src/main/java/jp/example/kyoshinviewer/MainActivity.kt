@@ -1184,7 +1184,8 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
         intensityClassText = text("--", 32f, true).apply {
             gravity = Gravity.CENTER
             includeFontPadding = false
-            setPadding(0, 0, 0, dp(4))
+            // Shift the number down inside the unchanged badge bounds.
+            setPadding(0, dp(8), 0, 0)
             setTextColor(Color.WHITE)
             background = roundedBackground(m3PrimaryContainer, dp(12))
         }
@@ -2377,8 +2378,7 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
             applyBilingualFonts(this)
             includeFontPadding = false
             gravity = Gravity.CENTER
-            // Shift only the badge text downward; keep the colored badge itself fixed.
-            setPadding(0, dp(4), 0, 0)
+            setPadding(0, 0, 0, 0)
             setTextColor(badgeColors?.text ?: Color.WHITE)
             background = GradientDrawable().apply {
                 setColor(
