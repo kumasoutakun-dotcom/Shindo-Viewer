@@ -1,6 +1,8 @@
 package jp.example.kyoshinviewer
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.res.Configuration
 import android.app.AlertDialog
 import android.graphics.Color
 import android.content.res.ColorStateList
@@ -310,6 +312,12 @@ class MainActivity : AppCompatActivity() {
                 handler.postDelayed(this, 15000)
             }
         }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val configuration = Configuration(newBase.resources.configuration)
+        configuration.fontScale *= 1.08f
+        super.attachBaseContext(newBase.createConfigurationContext(configuration))
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -905,6 +913,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             setBackgroundColor(m3Background)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            settings.textZoom = 108
             settings.loadsImagesAutomatically = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
