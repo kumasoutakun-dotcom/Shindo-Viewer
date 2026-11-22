@@ -1,6 +1,12 @@
+
 plugins {
     alias(libs.plugins.android.application)
 }
+
+val releaseStoreFile = System.getenv("RELEASE_STORE_FILE")
+val releaseStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
 
 android {
     namespace = "jp.example.kyoshinviewer"
@@ -18,18 +24,30 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = releaseStoreFile?.let { file(it) }
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+            storeType = "PKCS12"
+        }
+    }
+
     buildTypes {
         debug {
-            // Allow the test build to coexist with the installed release app.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
         release {
+            signingConfig = signingConfigs.getByName("release")
+
             optimization {
                 enable = false
             }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -47,4 +65,3 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }
-
