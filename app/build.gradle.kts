@@ -19,6 +19,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Allow the test build to coexist with the installed release app.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            resValue("string", "app_name", "Shindo-Viewer Debug")
+        }
         release {
             optimization {
                 enable = false
