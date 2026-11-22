@@ -80,6 +80,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var splitToggleButton: Button
     private var splitEnabled = false
     private var topSplitRatio = 50f
+    private var primaryBrowserZoomPercent = 100f
+    private var secondaryBrowserZoomPercent = 100f
+    private lateinit var primaryBrowserZoomSlider: Slider
+    private lateinit var secondaryBrowserZoomSlider: Slider
+    private lateinit var primaryBrowserZoomLabel: TextView
+    private lateinit var secondaryBrowserZoomLabel: TextView
     private lateinit var splitRatioSlider: Slider
     private lateinit var splitRatioLabel: TextView
     private lateinit var errorLayout: LinearLayout
@@ -138,6 +144,10 @@ class MainActivity : AppCompatActivity() {
     private var networkLost = false
     private var isMeasuring = false
     private var isDestroyed = false
+
+    private var idleAutoStartDeadlineElapsed = 0L
+    private var idleAutoStartCancelled = false
+    private var idleAutoStartRunnable: Runnable? = null
 
     @Volatile
     private var lastUiUpdateNanos = 0L
@@ -223,8 +233,33 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (savedInstanceState != null) {
+            idleAutoStartDeadlineElapsed =
+                savedInstanceState.getLong("idle_auto_start_deadline", 0L)
+            idleAutoStartCancelled =
+                savedInstanceState.getBoolean("idle_auto_start_cancelled", false)
+
+            if (idleAutoStartDeadlineElapsed <= 0L) {
+                idleAutoStartDeadlineElapsed =
+                    SystemClock.elapsedRealtime() + 10_000L
+            }
+        } else {
+            idleAutoStartDeadlineElapsed =
+                SystemClock.elapsedRealtime() + 10_000L
+            idleAutoStartCancelled = false
+        }
+
         val browserPrefs = getSharedPreferences("browser_settings", MODE_PRIVATE)
         topSplitRatio = browserPrefs.getFloat("split_ratio", 50f).coerceIn(10f, 90f)
+        val legacyBrowserZoom = browserPrefs.getFloat("zoom_percent", 100f)
+            .coerceIn(50f, 200f)
+        primaryBrowserZoomPercent =
+            browserPrefs.getFloat("primary_zoom_percent", legacyBrowserZoom)
+                .coerceIn(50f, 200f)
+        secondaryBrowserZoomPercent =
+            browserPrefs.getFloat("secondary_zoom_percent", legacyBrowserZoom)
+                .coerceIn(50f, 200f)
         supportActionBar?.hide()
         hideSystemBars()
 
@@ -303,23 +338,6 @@ class MainActivity : AppCompatActivity() {
             FrameLayout.LayoutParams.MATCH_PARENT
         ))
 
-        // 強震モニタが最上部にある状態で下へスワイプすると再読み込み
-        var refreshStartY = 0f
-        webView.setOnTouchListener { _, event ->
-            when (event.action) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    refreshStartY = event.y
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    val pullDistance = event.y - refreshStartY
-                    if (webView.scrollY <= 0 && pullDistance > dp(110)) {
-                        webView.reload()
-                        showMessage("ページを更新しています")
-                    }
-                }
-            }
-            false
-        }
 
         // サイドバーの背景
         drawerScrim = View(this).apply {
@@ -471,6 +489,114 @@ class MainActivity : AppCompatActivity() {
         )
 
         drawerScrollContent.addView(splitRatioPanel,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        // 上段ブラウザ倍率
+        val primaryBrowserZoomPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+        }
+
+        primaryBrowserZoomLabel = text(
+            "\u4E0A\u6BB5\u30D6\u30E9\u30A6\u30B6\u500D\u7387: ${primaryBrowserZoomPercent.toInt()}%",
+            11f,
+            true
+        ).apply {
+            setTextColor(m3OnSurfaceVariant)
+        }
+        primaryBrowserZoomPanel.addView(primaryBrowserZoomLabel)
+
+        primaryBrowserZoomSlider = Slider(this).apply {
+            valueFrom = 50f
+            valueTo = 200f
+            stepSize = 5f
+            value = primaryBrowserZoomPercent
+            contentDescription = "Top browser zoom"
+
+            addOnChangeListener { _, value, _ ->
+                primaryBrowserZoomPercent = value
+                primaryBrowserZoomLabel.text =
+                    "\u4E0A\u6BB5\u30D6\u30E9\u30A6\u30B6\u500D\u7387: ${value.toInt()}%"
+
+                getSharedPreferences("browser_settings", MODE_PRIVATE)
+                    .edit()
+                    .putFloat("primary_zoom_percent", value)
+                    .apply()
+
+                if (::webView.isInitialized) {
+                    applyBrowserZoomToWebView(webView, isPrimary = true)
+                }
+            }
+        }
+
+        primaryBrowserZoomPanel.addView(
+            primaryBrowserZoomSlider,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(40)
+            )
+        )
+
+        drawerScrollContent.addView(
+            primaryBrowserZoomPanel,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        // 下段ブラウザ倍率
+        val secondaryBrowserZoomPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+        }
+
+        secondaryBrowserZoomLabel = text(
+            "\u4E0B\u6BB5\u30D6\u30E9\u30A6\u30B6\u500D\u7387: ${secondaryBrowserZoomPercent.toInt()}%",
+            11f,
+            true
+        ).apply {
+            setTextColor(m3OnSurfaceVariant)
+        }
+        secondaryBrowserZoomPanel.addView(secondaryBrowserZoomLabel)
+
+        secondaryBrowserZoomSlider = Slider(this).apply {
+            valueFrom = 50f
+            valueTo = 200f
+            stepSize = 5f
+            value = secondaryBrowserZoomPercent
+            contentDescription = "Bottom browser zoom"
+
+            addOnChangeListener { _, value, _ ->
+                secondaryBrowserZoomPercent = value
+                secondaryBrowserZoomLabel.text =
+                    "\u4E0B\u6BB5\u30D6\u30E9\u30A6\u30B6\u500D\u7387: ${value.toInt()}%"
+
+                getSharedPreferences("browser_settings", MODE_PRIVATE)
+                    .edit()
+                    .putFloat("secondary_zoom_percent", value)
+                    .apply()
+
+                if (::secondaryWebView.isInitialized) {
+                    applyBrowserZoomToWebView(secondaryWebView, isPrimary = false)
+                }
+            }
+        }
+
+        secondaryBrowserZoomPanel.addView(
+            secondaryBrowserZoomSlider,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(40)
+            )
+        )
+
+        drawerScrollContent.addView(
+            secondaryBrowserZoomPanel,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -686,6 +812,8 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
         if (savedInstanceState?.getBoolean("csv_history_visible") == true) {
             showRecordingList()
         }
+
+        scheduleIdleAutoStart()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -703,6 +831,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
+                    view?.let { applyBrowserZoomToWebView(it, isPrimary = isMonitor) }
                    if (isMonitor) hideError()
 
                     if (!url.isNullOrBlank() &&
@@ -1360,11 +1489,33 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
         getSharedPreferences("browser_settings", MODE_PRIVATE)
             .edit()
             .putFloat("split_ratio", 50f)
+            .putFloat("primary_zoom_percent", 100f)
+            .putFloat("secondary_zoom_percent", 100f)
+            .remove("zoom_percent")
             .putBoolean("split_enabled", false)
             .remove("primary_url")
             .remove("secondary_url")
             .apply()
 
+        primaryBrowserZoomPercent = 100f
+        secondaryBrowserZoomPercent = 100f
+
+        if (::primaryBrowserZoomSlider.isInitialized) {
+            primaryBrowserZoomSlider.value = 100f
+        }
+        if (::secondaryBrowserZoomSlider.isInitialized) {
+            secondaryBrowserZoomSlider.value = 100f
+        }
+        if (::primaryBrowserZoomLabel.isInitialized) {
+            primaryBrowserZoomLabel.text =
+                "\u4E0A\u6BB5\u30D6\u30E9\u30A6\u30B6\u500D\u7387: 100%"
+        }
+        if (::secondaryBrowserZoomLabel.isInitialized) {
+            secondaryBrowserZoomLabel.text =
+                "\u4E0B\u6BB5\u30D6\u30E9\u30A6\u30B6\u500D\u7387: 100%"
+        }
+
+        applyBrowserZoomToViews()
         showMessage("設定を初期化しました。CSV記録は保持されています。")
     }
 
@@ -1446,7 +1597,83 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             setStroke(dp(1), m3OutlineVariant)
         }
 
+    private fun applyBrowserZoomToWebView(
+        target: WebView,
+        isPrimary: Boolean
+    ) {
+        val zoom = (
+            if (isPrimary) primaryBrowserZoomPercent
+            else secondaryBrowserZoomPercent
+        ).toInt().coerceIn(50, 200)
+
+        val script =
+            "(function() {" +
+                "var root = document.documentElement;" +
+                "if (root) { root.style.zoom = '${zoom}%'; }" +
+                "})();"
+
+        target.evaluateJavascript(script, null)
+    }
+
+    private fun applyBrowserZoomToViews() {
+        if (::webView.isInitialized) {
+            applyBrowserZoomToWebView(webView, isPrimary = true)
+        }
+        if (::secondaryWebView.isInitialized) {
+            applyBrowserZoomToWebView(secondaryWebView, isPrimary = false)
+        }
+    }
+    private fun scheduleIdleAutoStart() {
+        if (idleAutoStartCancelled || isMeasuring || isFinishing || isDestroyed) {
+            return
+        }
+
+        val remainingMillis =
+            idleAutoStartDeadlineElapsed - SystemClock.elapsedRealtime()
+
+        if (remainingMillis <= 0L) {
+            startMeasurement()
+            return
+        }
+
+        val task = Runnable {
+            idleAutoStartRunnable = null
+
+            if (!idleAutoStartCancelled &&
+                !isMeasuring &&
+                !isFinishing &&
+                !isDestroyed
+            ) {
+                startMeasurement()
+            }
+        }
+
+        idleAutoStartRunnable = task
+        handler.postDelayed(task, remainingMillis)
+    }
+
+    private fun cancelIdleAutoStart() {
+        if (idleAutoStartCancelled || idleAutoStartDeadlineElapsed <= 0L) {
+            return
+        }
+
+        if (SystemClock.elapsedRealtime() >= idleAutoStartDeadlineElapsed) {
+            return
+        }
+
+        idleAutoStartCancelled = true
+        idleAutoStartRunnable?.let { handler.removeCallbacks(it) }
+        idleAutoStartRunnable = null
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        cancelIdleAutoStart()
+    }
+
     private fun startMeasurement() {
+        cancelIdleAutoStart()
+
         if (!measurementEngine.isAvailable) {
             sensorStatusText.text = "加速度センサーが利用できません"
             return
@@ -2514,6 +2741,9 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
         val editor = getSharedPreferences("browser_settings", MODE_PRIVATE)
             .edit()
             .putFloat("split_ratio", topSplitRatio)
+            .putFloat("primary_zoom_percent", primaryBrowserZoomPercent)
+            .putFloat("secondary_zoom_percent", secondaryBrowserZoomPercent)
+            .remove("zoom_percent")
             .putBoolean("split_enabled", splitEnabled)
 
         if (::webView.isInitialized) {
@@ -2560,6 +2790,8 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
         outState.putBoolean("split_enabled", splitEnabled)
         outState.putFloat("split_ratio", topSplitRatio)
         outState.putBoolean("csv_history_visible", csvHistoryVisible)
+        outState.putLong("idle_auto_start_deadline", idleAutoStartDeadlineElapsed)
+        outState.putBoolean("idle_auto_start_cancelled", idleAutoStartCancelled)
         super.onSaveInstanceState(outState)
     }
 
