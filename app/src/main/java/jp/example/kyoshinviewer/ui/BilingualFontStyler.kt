@@ -96,6 +96,14 @@ object BilingualFontStyler {
             applyAksharSpans(styled, aksharPaint)
             textView.setText(styled, TextView.BufferType.SPANNABLE)
         }
+
+        // Hint text is rendered separately from TextView.text, so style it as well.
+        val currentHint = textView.hint
+        if (!currentHint.isNullOrEmpty()) {
+            val styledHint = SpannableStringBuilder(currentHint)
+            applyAksharSpans(styledHint, aksharPaint)
+            textView.hint = styledHint
+        }
     }
 
     private fun applyAksharSpans(
