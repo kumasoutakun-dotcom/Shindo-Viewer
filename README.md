@@ -106,6 +106,15 @@ APKをインストールする際は、Androidの設定で必要なインスト�
 - [KyoshinShindoColorMap](https://github.com/ingen084/KyoshinShindoColorMap)
 - [kotoho7 / calc-realtime-shindo-advent2025](https://github.com/kotoho7/calc-realtime-shindo-advent2025)
 
-## ライセンス
+## 使用フォント
 
-現在、ライセンスは設定していません。
+- 日本語：GenZenGothicKaiC
+- Akshar Boldの字形がある日本語以外の文字：Akshar
+
+AksharはAkshar Type Project Authorsによるフォントで、SIL Open Font License 1.1の下で配布されています。ライセンス本文はアプリ内の `app/src/main/assets/licenses/AKSHAR-OFL.txt` に同梱しています。
+
+- [Akshar Type Project](https://github.com/tallchai/akshar-type)
+
+## アプリのライセンス
+
+アプリ本体のライセンスは設定していません。使用フォントのライセンスは上記のとおりです。
