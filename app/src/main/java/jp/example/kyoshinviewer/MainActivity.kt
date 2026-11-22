@@ -46,6 +46,7 @@ import jp.example.kyoshinviewer.intensity.processor.IntensityClass
 import jp.example.kyoshinviewer.intensity.processor.ProcessedSample
 import jp.example.kyoshinviewer.measurement.SeismicMeasurementEngine
 import jp.example.kyoshinviewer.recording.CsvRecorder
+import jp.example.kyoshinviewer.ui.BilingualFontStyler
 import jp.example.kyoshinviewer.ui.IntensityColorBarView
 import jp.example.kyoshinviewer.ui.IntensityHistoryBandView
 import jp.example.kyoshinviewer.ui.WaveformView
@@ -114,6 +115,78 @@ class MainActivity : AppCompatActivity() {
 
     private val appTypeface by lazy {
         resources.getFont(R.font.gen_zen_gothic_kaic)
+    }
+
+    private val aksharTypeface by lazy {
+        resources.getFont(R.font.akshar_regular)
+    }
+
+    private fun applyBilingualFonts(view: View?) {
+        view?.let { BilingualFontStyler.install(it, appTypeface, aksharTypeface) }
+    }
+
+    private fun injectBilingualWebFonts(target: WebView) {
+        val css = """
+            @font-face {
+                font-family: 'ShindoAkshar';
+                src: url('file:///android_res/font/akshar_regular.ttf') format('truetype');
+                font-style: normal;
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'ShindoGenZen';
+                src: url('file:///android_res/font/gen_zen_gothic_kaic.ttf') format('truetype');
+                font-style: normal;
+                font-weight: 400;
+            }
+            html, body, body *:not(svg):not(svg *):not(canvas) {
+                font-family: 'ShindoAkshar', 'ShindoGenZen', sans-serif !important;
+            }
+        """.trimIndent()
+        val cssLiteral = org.json.JSONObject.quote(css)
+        val script = """
+            (function() {
+                const styleId = 'shindo-viewer-bilingual-fonts';
+                function applyToDocument(doc) {
+                    try {
+                        if (!doc || !doc.documentElement) return;
+                        if (!doc.getElementById(styleId)) {
+                            const style = doc.createElement('style');
+                            style.id = styleId;
+                            style.textContent = $cssLiteral;
+                            (doc.head || doc.documentElement).appendChild(style);
+                        }
+                        doc.querySelectorAll('iframe').forEach(function(frame) {
+                            if (!frame.__shindoFontHooked) {
+                                frame.__shindoFontHooked = true;
+                                frame.addEventListener('load', function() {
+                                    try { applyToDocument(frame.contentDocument); } catch (_) {}
+                                });
+                            }
+                            try { applyToDocument(frame.contentDocument); } catch (_) {}
+                        });
+                        if (!doc.__shindoFontObserver) {
+                            doc.__shindoFontObserver = new MutationObserver(function() {
+                                doc.querySelectorAll('iframe').forEach(function(frame) {
+                                    if (!frame.__shindoFontHooked) {
+                                        frame.__shindoFontHooked = true;
+                                        frame.addEventListener('load', function() {
+                                            try { applyToDocument(frame.contentDocument); } catch (_) {}
+                                        });
+                                    }
+                                });
+                            });
+                            doc.__shindoFontObserver.observe(doc.documentElement, {
+                                childList: true,
+                                subtree: true
+                            });
+                        }
+                    } catch (_) {}
+                }
+                applyToDocument(document);
+            })();
+        """.trimIndent()
+        target.evaluateJavascript(script, null)
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -695,6 +768,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
 
         mainRoot = outer
         setContentView(outer)
+        applyBilingualFonts(outer)
 
         measurementEngine = SeismicMeasurementEngine(
             context = this,
@@ -831,7 +905,10 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    view?.let { applyBrowserZoomToWebView(it, isPrimary = isMonitor) }
+                    view?.let {
+                        injectBilingualWebFonts(it)
+                        applyBrowserZoomToWebView(it, isPrimary = isMonitor)
+                    }
                    if (isMonitor) hideError()
 
                     if (!url.isNullOrBlank() &&
@@ -879,6 +956,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
    private fun createBrowserUrlBar(isPrimary: Boolean): LinearLayout {
         val input = TextInputEditText(this).apply {
             typeface = appTypeface
+            applyBilingualFonts(this)
             textSize = 14f
             setSingleLine(true)
             hint = "https://example.com"
@@ -1434,7 +1512,9 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
             .setPositiveButton("初期化") { _, _ ->
                 resetAppSettings()
             }
-            .show()
+            .show().also { dialog ->
+                applyBilingualFonts(dialog.window?.decorView)
+            }
     }
 
     private fun resetAppSettings() {
@@ -1539,6 +1619,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
         return MaterialButton(this).apply {
             text = label
             typeface = appTypeface
+            applyBilingualFonts(this)
             textSize = 13f
             isAllCaps = false
             setCornerRadius(dp(14))
@@ -1577,6 +1658,7 @@ outer.addView(drawerPanel, FrameLayout.LayoutParams(
     private fun text(value: String, size: Float, bold: Boolean = false): TextView =
         TextView(this).apply {
             text = value
+            applyBilingualFonts(this)
             textSize = size
             includeFontPadding = false
             setPadding(0, 0, 0, 0)
@@ -2056,6 +2138,7 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
         })
 
         setContentView(screen)
+        applyBilingualFonts(screen)
         hideSystemBars()
         loadRecordingList()
     }
@@ -2472,7 +2555,9 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
                 }
             }
             .setNegativeButton("キャンセル", null)
-            .show()
+            .show().also { dialog ->
+                applyBilingualFonts(dialog.window?.decorView)
+            }
     }
 
     private fun returnToMainScreen() {
@@ -2684,6 +2769,7 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
         }
 
         dialog.show()
+        applyBilingualFonts(dialog.window?.decorView)
 
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
             ?.setOnClickListener {
