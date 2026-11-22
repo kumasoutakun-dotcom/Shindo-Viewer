@@ -181,6 +181,7 @@ class MainActivity : AppCompatActivity() {
                                             try { applyToDocument(frame.contentDocument); } catch (_) {}
                                         });
                                     }
+                                    try { applyToDocument(frame.contentDocument); } catch (_) {}
                                 });
                             });
                             doc.__shindoFontObserver.observe(doc.documentElement, {
