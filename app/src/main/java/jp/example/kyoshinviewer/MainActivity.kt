@@ -2377,6 +2377,8 @@ private fun updateAutomaticRecording(sample: ProcessedSample) {
             applyBilingualFonts(this)
             includeFontPadding = false
             gravity = Gravity.CENTER
+            // Shift only the badge text downward; keep the colored badge itself fixed.
+            setPadding(0, dp(4), 0, 0)
             setTextColor(badgeColors?.text ?: Color.WHITE)
             background = GradientDrawable().apply {
                 setColor(
